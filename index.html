@@ -18,10 +18,10 @@
         .chat-header { background-color: #242a38; color: white; padding: 20px; display: flex; align-items: center; gap: 12px; }
         .shield-icon { background-color: #3b82f6; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
         .header-text h1 { font-size: 16px; margin-bottom: 4px; font-weight: bold; }
-        .header-text p { font-size: 12px; color: #adb5bd; }
+        .header-text p { font-size: 12px; color: #adb5bd; margin-bottom: 4px; }
         
-        /* 💡 추가됨: 임시 링크 스타일 */
-        .temp-link { margin-top: 6px; font-size: 11px; color: #ced4da; }
+        /* 임시 링크 스타일 */
+        .temp-link { font-size: 11px; color: #ced4da; }
         .temp-link a { color: #66d9e8; text-decoration: none; font-weight: bold; transition: 0.2s; }
         .temp-link a:hover { color: #99e9f2; text-decoration: underline; }
         
@@ -40,6 +40,7 @@
         .inline-btn { background-color: #ffffff; border: 1px solid #cce0ff; color: #3b82f6; padding: 12px 15px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center; width: 100%; word-break: keep-all; }
         .inline-btn:hover { background-color: #f0f6ff; border-color: #3b82f6; }
         
+        /* 이전 단계, 처음으로 버튼 등 기능 버튼 색상/스타일 차별화 */
         .inline-btn.action-btn { background-color: #f1f3f5; color: #495057; border-color: #dee2e6; }
         .inline-btn.action-btn:hover { background-color: #e9ecef; }
         
@@ -71,7 +72,7 @@
             <h1>수수료 지원 챗봇</h1>
             <p>AI는 정보 제공시 실수를 할 수 있습니다🥲</p>
             <div class="temp-link">
-                임시: <a href="https://docs.google.com/spreadsheets/d/15oN1_97U6XIcElBJGTWubpfiWYPp-bb1MLxgskWxfTc/edit?usp=sharing" target="_blank">구글 시트 바로가기</a>
+                임시 : <a href="https://docs.google.com/spreadsheets/d/15oN1_97U6XIcElBJGTWubpfiWYPp-bb1MLxgskWxfTc/edit?usp=sharing" target="_blank">구글 시트 바로가기</a>
             </div>
         </div>
     </div>
@@ -333,14 +334,15 @@
             calcData.premium = num;
             calcState = 16;
             
-            addBotMessage(`✅ 보험료 ${num.toLocaleString()}원 확인.\n\n마지막으로 본인의 **수수료 등급(%)**을 숫자만 입력해주세요.\n(예: 90)`, [
+            addBotMessage(`✅ 보험료 ${num.toLocaleString()}원 확인.\n\n마지막으로 본인의 **수수료 등급(%)**을 숫자만 입력해주세요.\n(예: 90.5)`, [
                 { text: "🔙 이전 (보험료 다시 입력)", action: "goBack_15" },
                 { text: "처음으로 돌아가기", target: "main" }
             ]);
         }
         else if (calcState === 16) { 
-            const grade = Number(text.replace(/[^0-9]/g, ""));
-            if (isNaN(grade) || grade === 0) { addBotMessage("❌ 숫자로만 다시 입력해주세요."); return; }
+            // 💡 여기서 소수점(.) 입력을 허용하도록 정규식 수정 [^0-9.]
+            const grade = Number(text.replace(/[^0-9.]/g, ""));
+            if (isNaN(grade) || grade === 0) { addBotMessage("❌ 숫자로만 다시 입력해주세요. (예: 98.5)"); return; }
             
             calcData.grade = grade;
             calcState = 0; 
@@ -348,13 +350,16 @@
             let appliedPayoutRate = calcData.payout * (calcData.grade / 100);
             let estimated = calcData.premium * (calcData.conv1 / 100) * (appliedPayoutRate / 100);
             
+            // 💡 적용 지급율 소수점 지저분하게 나오지 않도록 변환
+            let displayPayoutRate = Number(appliedPayoutRate.toFixed(3));
+            
             let result = `🎉 수수료 계산 결과입니다!\n\n`;
             result += `📦 **상품명:** ${calcData.company} ${calcData.name}\n`;
             result += `⏳ **조건:** ${calcData.term} / ${calcData.type || "기본형"}\n\n`;
             result += `📊 **환산 1차:** ${calcData.conv1}%\n`;
-            result += `📈 **적용 지급율: ${appliedPayoutRate.toFixed(2)}%**\n`;
+            result += `📈 **적용 지급율: ${displayPayoutRate}%**\n`;
             result += `💰 **예상 수수료: ${Math.floor(estimated).toLocaleString()}원**\n\n`;
-            result += `(산식: 보험료 ${calcData.premium.toLocaleString()}원 × 환산1차율 ${calcData.conv1}% × 적용 지급율 ${appliedPayoutRate.toFixed(2)}%)`;
+            result += `(산식: 보험료 ${calcData.premium.toLocaleString()}원 × 환산1차율 ${calcData.conv1}% × 적용 지급율 ${displayPayoutRate}%)`;
             
             addBotMessage(result, [
                 { text: "🔄 이 상품으로 다시 계산 (금액 정정)", action: "goBack_15" },
